@@ -1,0 +1,1364 @@
+schema_version: 1.0.0
+name: ecommerce_customer_service_v1
+id: 7667885517007110163
+description: "AI电商客服助手（一期），重点解决用户售后高频问题智能回答。核心场景：物流查询、订单状态等。关键能力：意图识别、订单接口调用、转人工兜底。"
+mode: chatflow
+icon: plugin_icon/chatflow-icon.png
+nodes:
+    - id: "100001"
+      type: start
+      title: 开始
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Start-v2.jpg
+      description: "工作流的起始节点，用于设定启动工作流需要的信息"
+      position:
+        x: 180
+        y: 878.4
+      parameters:
+        node_outputs:
+            CONVERSATION_NAME:
+                type: string
+                value: null
+                default_value: Default
+                description: 本次请求绑定的会话，会自动写入消息、会从该会话读对话历史。
+            USER_INPUT:
+                type: string
+                value: null
+            user_id:
+                type: string
+                value: null
+    - id: "900001"
+      type: end
+      title: 结束
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-End-v2.jpg
+      description: "工作流的最终节点，用于返回工作流运行后的结果信息"
+      position:
+        x: 5605.543975859648
+        y: 727.4484896550335
+      parameters:
+        node_inputs:
+            - name: expressNumber
+              input:
+                type: string
+                value:
+                    path: expressNumber
+                    ref_node: "133964"
+            - name: finalStatusDesc
+              input:
+                type: string
+                value:
+                    path: finalStatusDesc
+                    ref_node: "133964"
+            - name: expressNumber1
+              input:
+                type: string
+                value:
+                    path: expressNumber
+                    ref_node: "1916902"
+            - name: finalStatusDesc1
+              input:
+                type: string
+                value:
+                    path: finalStatusDesc
+                    ref_node: "1916902"
+            - name: output
+              input:
+                type: list
+                items:
+                    type: string
+                    value: null
+                value:
+                    path: output
+                    ref_node: "148177"
+            - name: finalStatusDesc_list
+              input:
+                type: list
+                items:
+                    type: string
+                    value: null
+                value:
+                    path: finalStatusDesc_list
+                    ref_node: "148177"
+            - name: expressNumber_list
+              input:
+                type: list
+                items:
+                    type: string
+                    value: null
+                value:
+                    path: expressNumber_list
+                    ref_node: "148177"
+        terminatePlan: returnVariables
+    - id: "124727"
+      type: intent
+      title: 意图识别
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Intent-v2.jpg
+      description: "用于用户输入的意图识别，并将其与预设意图选项进行匹配。"
+      position:
+        x: 640
+        y: 755.4499999999999
+      parameters:
+        chatHistorySetting:
+            chatHistoryRound: 3
+            enableChatHistory: false
+        intents:
+            - name: 闲聊
+            - name: 查询订单/物流状态
+            - name: 退换货等售后处理
+            - name: 商品、店铺相关政策
+            - name: 发票优惠券
+            - name: 商品咨询
+            - name: 投诉
+        llmParam:
+            chatHistoryRound: 3
+            enableChatHistory: false
+            frequencyPenalty: 0
+            generationDiversity: default_val
+            maxTokens: 4096
+            modelName: 豆包·2.0·pro
+            modelType: 1.772700462e+09
+            parameters:
+                max_completion_tokens: 0
+                reasoning_effort: medium
+            prompt:
+                type: string
+                value:
+                    content: '{{query}}'
+                    type: literal
+            responseFormat: 2
+            systemPrompt:
+                type: string
+                value:
+                    content: |-
+                        你是一个专业的电商售后意图识别引擎。你的唯一任务是分析用户的输入，并将其精准分类到预定义的意图标签中。
+
+                        ### 预定义意图标签（Labels）：
+
+                        - ORDER_QUERY: 查询物流状态、催发货、修改收货地址/电话、拒收快递。
+                        - REFUND_AFTER_SALES: 申请退款、退货、换货、询问退换货政策、运费谁承担、退款进度。
+                        - PRODUCT_ISSUE: 商品破损、质量问题、错发/漏发、不会使用/需要指导、保修维修。
+                        - ORDER_PAYMENT: 取消订单、修改订单信息、发票开具、支付失败、优惠券/满减售后问题。
+                        - COMPLAINT_URGENT: 情绪极度激动、要求赔偿、提及投诉/315/媒体曝光、明确要求转人工。
+                        - GENERAL_CHAT: 打招呼（你好/在吗）、闲聊、表达感谢、无法识别的无效输入。
+                        - PRODUCT_CONSULT：咨询商品口味、保质期等相关问题。
+                        - UNKNOWN：其他无法判定难以判定或置信度较低的情况。
+
+                        ### 输出规则：
+
+                        1. 必须且仅输出一个合法的JSON对象，不要包含任何Markdown格式（如 ```json），不要包含任何解释性文字。
+                        2. JSON格式必须严格为：{"intent": "标签名称", "confidence": 0.95, "summary": "一句话概括用户核心诉求"}
+                        3. 如果用户包含多个意图，请提取当前最紧急、最需要立即处理的意图作为主意图，并在summary中简要提及次要诉求。
+                        4. 如果用户情绪激动或明确提出“转人工”，必须优先分类为 COMPLAINT_URGENT。
+                        5. confidence 字段表示你对该分类的置信度（0.0 - 1.0）。
+
+                        ### 示例：
+
+                        User: "我的快递怎么三天了还在中转站？"
+                        Assistant: {"intent": "LOGISTICS_QUERY", "confidence": 0.99, "summary": "查询物流停滞原因"}
+
+                        User: "收到的杯子碎了，我要退款，还有你们这什么质量啊！"
+                        Assistant: {"intent": "PRODUCT_ISSUE", "confidence": 0.95, "summary": "商品破损要求退款，伴随质量投诉"}
+
+                        User: "你好，在吗？"
+                        Assistant: {"intent": "GENERAL_CHAT", "confidence": 0.99, "summary": "用户打招呼"}
+
+                        User: "帮我改下地址，另外发票什么时候能开？"
+                        Assistant: {"intent": "LOGISTICS_QUERY", "confidence": 0.90, "summary": "修改收货地址，附带询问发票开具"}
+                    type: literal
+            thinkingType: disabled
+        mode: all
+        node_inputs:
+            - name: query
+              input:
+                value:
+                    path: USER_INPUT
+                    ref_node: "100001"
+        node_outputs:
+            classificationId:
+                type: integer
+                value: null
+            reason:
+                type: string
+                value: null
+        settingOnError:
+            processType: 1
+            retryTimes: 0
+            timeoutMs: 60000
+        version: "2"
+    - id: "136236"
+      type: llm
+      title: 用户订单信息提取
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-LLM-v2.jpg
+      description: "调用大语言模型,使用变量和提示词生成回复"
+      version: "3"
+      position:
+        x: 1100
+        y: 649.725
+      parameters:
+        fcParamVar:
+            knowledgeFCParam: {}
+        llmParam:
+            - name: apiMode
+              input:
+                type: integer
+                value: "0"
+            - name: temperature
+              input:
+                type: float
+                value: "0.5"
+            - name: topP
+              input:
+                type: float
+                value: "1"
+            - name: frequencyPenalty
+              input:
+                type: float
+                value: "0"
+            - name: maxTokens
+              input:
+                type: integer
+                value: "4096"
+            - name: spCurrentTime
+              input:
+                type: boolean
+                value: false
+            - name: spAntiLeak
+              input:
+                type: boolean
+                value: false
+            - name: thinkingType
+              input:
+                type: string
+                value: enabled
+            - name: responseFormat
+              input:
+                type: integer
+                value: "2"
+            - name: modelName
+              input:
+                type: string
+                value: 豆包·1.8·深度思考
+            - name: modelType
+              input:
+                type: integer
+                value: "1768187121"
+            - name: generationDiversity
+              input:
+                type: string
+                value: balance
+            - name: parameters
+              input:
+                type: object
+                properties:
+                    max_completion_tokens:
+                        type: integer
+                        value: "0"
+                    reasoning_effort:
+                        type: string
+                        value: medium
+                value: null
+            - name: prompt
+              input:
+                type: string
+                value: '{{input}}'
+            - name: enableChatHistory
+              input:
+                type: boolean
+                value: true
+            - name: chatHistoryRound
+              input:
+                type: integer
+                value: "3"
+            - name: systemPrompt
+              input:
+                type: string
+                value: |-
+                    #### 角色设定：电商售后信息提取专家
+
+                    你是一个专业的电商售后信息提取引擎。你的唯一任务是分析用户的自然语言输入，精准提取与订单查询、物流追踪、账户核实相关的关键实体信息，并将其转化为标准的结构化JSON格式。
+
+                    #### 核心提取目标（Entities）：
+
+                    请重点从用户输入中寻找并提取以下信息：
+
+                    - **order_id**: 订单编号（通常为纯数字或包含字母的长字符串，如 `202310240001`）。
+                    - **phone_number**: 手机号码（通常为11位数字，可能包含国家区号如 `+86`,如：13300133000，+8613300133000）。
+                    - **user_id**: 用户ID或买家账号（通常以特定字母开头或为纯数字）。
+                    - **tracking_number**: 快递单号/物流单号（通常包含数字、字母、SN、DD、ORDER等前缀，如：YT9876543210）。
+                    - **product_name**: 商品名称或核心关键词（用于辅助模糊查询）。
+                    - **query_type**：用户想查什么，枚举：
+                        - logistics：物流/到哪里了？
+                        - shipping：是否发货/什么时候发货
+                        - delivery_time：预计什么时候到
+                        - general：泛订单查询
+
+                    #### 业务完整性评估规则：
+
+                    提取信息后，请评估是否满足以下任一查询条件：
+
+                    1. 拥有有效的 order_id
+                    2. 拥有有效的 tracking_number
+                    3. 拥有有效的 phone_number
+                    如果满足上述任一条件，`is_info_complete` 为 true。否则为 false。
+
+                    #### 追问话术生成规则：
+
+                    如果 `is_info_complete` 为 false，请根据缺失的关键信息生成一句简短、礼貌、有同理心的追问话术（`clarification_messag`）。
+
+                    - 如果用户完全没提供任何信息：询问订单号、快递/物流单号、手机号。
+                    - 如果用户提供了商品但没提供快递/物流单号或订单号或手机号：询问快递/物流单号或订单号或手机号。
+
+                    #### 提取与输出规则：
+
+                    1. **纯净输出**：必须且仅输出一个合法的JSON对象。严禁包含任何Markdown格式（如 ```json）、解释性文字或前缀后缀。
+                    2. **缺失处理**：如果用户输入中未提及某个字段，**不要**编造或猜测，该字段的值必须为 `null`。
+                    3. **格式清洗**：提取到的手机号或订单号，必须去除空格、连字符（-）等无关符号，仅保留核心数字/字母。
+                    4. **多值处理**：如果用户提供了多个同类信息（如同时提供两个订单号），以数组形式返回；如果只有一个，返回字符串。
+                    5. **严格JSON格式**：输出必须严格遵循以下结构：
+                    {
+                      "order_id": "string | array | null",
+                      "phone_number": "string | null",
+                      "user_id": "string | null",
+                      "tracking_number": "string | null",
+                      "product_name": "string | null",
+                      "is_info_complete": true/false,
+                      "clarification_messag": "string | null"
+                    }
+
+                    ### Few-Shot 示例：
+
+                    **User**: "帮我查一下订单 202310248888 的物流到哪了"
+                    **Assistant**: {"order_id": "202310248888", "phone_number": null, "user_id": null, "tracking_number": null, "product_keyword": null}
+
+                    **User**: "我的手机号是 138-1234-5678，绑定的那个买鞋的订单发货了吗？"
+                    **Assistant**: {"order_id": null, "phone_number": "13812345678", "user_id": null, "tracking_number": null, "product_keyword": "鞋"}
+
+                    **User**: "我是用户UID: U889900，快递单号 SF1234567890 怎么还没更新？"
+                    **Assistant**: {"order_id": null, "phone_number": null, "user_id": "U889900", "tracking_number": "SF1234567890", "product_keyword": null}
+
+                    **User**: "你好，在吗？"
+                    **Assistant**: {"order_id": null, "phone_number": null, "user_id": null, "tracking_number": null, "product_keyword": null}
+            - name: stableSystemPrompt
+              input:
+                type: string
+                value: ""
+            - name: canContinue
+              input:
+                type: boolean
+                value: false
+            - name: loopPromptVersion
+              input:
+                type: string
+                value: ""
+            - name: loopPromptName
+              input:
+                type: string
+                value: ""
+            - name: loopPromptId
+              input:
+                type: string
+                value: ""
+        node_inputs:
+            - name: input
+              input:
+                value:
+                    path: USER_INPUT
+                    ref_node: "100001"
+        node_outputs:
+            clarification_messag:
+                type: string
+                value: null
+            is_info_complete:
+                type: boolean
+                value: null
+            order_id:
+                type: string
+                value: null
+            phone_number:
+                type: string
+                value: null
+            product_name:
+                type: string
+                value: null
+            query_type:
+                type: string
+                value: null
+            reasoning_content:
+                type: string
+                value: null
+            tracking_number:
+                type: string
+                value: null
+            user_id:
+                type: string
+                value: null
+        settingOnError:
+            processType: 1
+            retryTimes: 0
+            switch: false
+            timeoutMs: 180000
+    - id: "166482"
+      type: output
+      title: 复杂问题转人工
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+      description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+      position:
+        x: 1100
+        y: 1435.4
+      parameters:
+        callTransferVoice: true
+        chatHistoryWriting: historyWrite
+        content:
+            type: string
+            value:
+                content: 亲，非常抱歉。您反馈的这个问题比较重要，为了能给您最准确、最妥善的解决方案，我已经为您呼叫了专属人工客服。人工客服马上接入，请您稍等片刻哦~
+                type: literal
+        node_inputs:
+            - name: intention
+              input:
+                value:
+                    path: classificationId
+                    ref_node: "124727"
+        streamingOutput: false
+    - id: "128243"
+      type: condition
+      title: 选择器
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Condition-v2.jpg
+      description: "连接多个下游分支，若设定的条件成立则仅运行对应的分支，若均不成立则只运行“否则”分支"
+      position:
+        x: 1560
+        y: 662.825
+      parameters:
+        branches:
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: is_info_complete
+                                ref_node: "136236"
+                      operator: 12
+                logic: 2
+    - id: "152547"
+      type: question
+      title: 追问
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Direct-Question-v2.jpg
+      description: "支持中间向用户提问问题,支持预置选项提问和开放式问题提问两种方式"
+      position:
+        x: 2020
+        y: 42.75
+      parameters:
+        answer_type: text
+        dynamic_option:
+            type: string
+            value:
+                content:
+                    blockID: ""
+                    name: ""
+                    source: block-output
+                rawMeta:
+                    type: 1
+                type: ref
+        extra_output: true
+        limit: 3
+        llmParam:
+            cachingExpireTime: 259200
+            frequencyPenalty: 0
+            generationDiversity: balance
+            maxOutputTokens: 4096
+            maxTokens: 4096
+            modelName: 豆包·2.0·lite
+            modelType: 1.772546477e+09
+            parameters:
+                max_completion_tokens: 0
+            responseFormat: 2
+            store: true
+            systemPrompt: ""
+        node_inputs:
+            - name: clarification_messag
+              input:
+                value:
+                    path: clarification_messag
+                    ref_node: "136236"
+        node_outputs:
+            QUESTION_DATA:
+                type: list
+                items:
+                    type: object
+                    properties:
+                        content:
+                            type: string
+                            value: null
+                        content_type:
+                            type: string
+                            value: null
+                    value: null
+                required: true
+                value: null
+                description: 问题列表
+            USER_RESPONSE:
+                type: string
+                required: true
+                value: null
+                description: 用户本轮对话输入内容
+            order_id:
+                type: string
+                value: null
+            phone_number:
+                type: string
+                value: null
+            product_name:
+                type: string
+                value: null
+            tracking_number:
+                type: string
+                value: null
+        option_type: static
+        options:
+            - name: ""
+            - name: ""
+        question: '{{clarification_messag}}'
+    - id: "159600"
+      type: output
+      title: 手机号/订单号/物流单号--输出
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+      description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+      position:
+        x: 2020
+        y: 1251.1250000000002
+      parameters:
+        callTransferVoice: true
+        chatHistoryWriting: historyWrite
+        content:
+            type: string
+            value:
+                content: 好的，正在为您查询{{order_id}}{{tracking_number}}{{phone_number}}相关订单，请稍后……
+                type: literal
+        node_inputs:
+            - name: order_id
+              input:
+                value:
+                    path: order_id
+                    ref_node: "136236"
+            - name: tracking_number
+              input:
+                value:
+                    path: tracking_number
+                    ref_node: "136236"
+            - name: phone_number
+              input:
+                value:
+                    path: phone_number
+                    ref_node: "136236"
+        streamingOutput: false
+    - id: "133964"
+      type: plugin
+      title: ExpressDeliveryPlugin
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Plugin-v2.jpg
+      description: "查询快递状态，返回值为空代表未查到快递信息，请检查快递单号是否正确"
+      position:
+        x: 2940
+        y: -9.237055564881302e-14
+      parameters:
+        apiParam:
+            - name: apiID
+              input:
+                type: string
+                value: "7362084343025532964"
+            - name: apiName
+              input:
+                type: string
+                value: "ExpressDeliveryPlugin"
+            - name: pluginID
+              input:
+                type: string
+                value: "7362084343025516580"
+            - name: pluginName
+              input:
+                type: string
+                value: "国内快递查询"
+            - name: pluginVersion
+              input:
+                type: string
+                value: ""
+            - name: tips
+              input:
+                type: string
+                value: ""
+            - name: outDocLink
+              input:
+                type: string
+                value: ""
+        node_inputs:
+            - name: express_number
+              input:
+                value:
+                    path: tracking_number
+                    ref_node: "136236"
+        node_outputs:
+            code:
+                type: integer
+                value: null
+            customerPhone:
+                type: string
+                value: null
+                description: 客服电话
+            detailUrl:
+                type: string
+                value: null
+                description: 快递服务商信息查询详情页
+            expressName:
+                type: string
+                value: null
+                description: 快递公司
+            expressNumber:
+                type: string
+                value: null
+                description: 快递单号
+            finalStatus:
+                type: string
+                value: null
+                description: 快递最终状态
+            finalStatusDesc:
+                type: string
+                value: null
+                description: 快递最终状态描述
+            message:
+                type: string
+                value: null
+            statusDetail:
+                type: list
+                items:
+                    type: object
+                    properties:
+                        areaCode:
+                            type: string
+                            value: null
+                            description: 快递所处地点地理编码
+                        areaName:
+                            type: string
+                            value: null
+                            description: 快递所处地点
+                        status:
+                            type: string
+                            value: null
+                            description: 快递状态
+                        statusDesc:
+                            type: string
+                            value: null
+                            description: 快递状态描述
+                        statusTime:
+                            type: string
+                            value: null
+                            description: 快递状态更新时间
+                    value: null
+                value: null
+                description: 快递状态明细
+        settingOnError:
+            processType: 1
+            retryTimes: 0
+            timeoutMs: 180000
+    - id: "186792"
+      type: condition
+      title: 选择器_order_id
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Condition-v2.jpg
+      description: "连接多个下游分支，若设定的条件成立则仅运行对应的分支，若均不成立则只运行“否则”分支"
+      position:
+        x: 2480
+        y: 563.325
+      parameters:
+        branches:
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: tracking_number
+                                ref_node: "136236"
+                      operator: 10
+                logic: 2
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: order_id
+                                ref_node: "136236"
+                      operator: 10
+                logic: 2
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: phone_number
+                                ref_node: "136236"
+                      operator: 4
+                      right:
+                        input:
+                            type: integer
+                            value: 11
+                logic: 2
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: tracking_number
+                                ref_node: "152547"
+                      operator: 10
+                logic: 2
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: order_id
+                                ref_node: "152547"
+                      operator: 10
+                logic: 2
+            - condition:
+                conditions:
+                    - left:
+                        input:
+                            value:
+                                path: phone_number
+                                ref_node: "152547"
+                      operator: 4
+                      right:
+                        input:
+                            type: integer
+                            value: 11
+                logic: 2
+    - id: "197955"
+      type: select_record
+      title: 查询数据
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icaon-database-select.jpg
+      description: "从表获取数据，用户可定义查询条件、选择列等，输出符合条件的数据"
+      position:
+        x: 2940
+        y: 211.6999999999999
+      parameters:
+        databaseInfoList:
+            - databaseInfoID: "7667976117449523235"
+        node_outputs:
+            outputList:
+                type: list
+                items:
+                    type: object
+                    properties:
+                        order_id:
+                            type: string
+                            value: null
+                        product_name:
+                            type: string
+                            value: null
+                        tracking_number:
+                            type: string
+                            value: null
+                        user_phonenumber:
+                            type: string
+                            value: null
+                    value: null
+                value: null
+            rowNum:
+                type: integer
+                value: null
+        selectParam:
+            condition:
+                conditionList:
+                    - - name: left
+                        input:
+                            type: string
+                            value: "order_id"
+                      - name: operation
+                        input:
+                            type: string
+                            value: "EQUAL"
+                      - name: right
+                        input:
+                            value:
+                                path: order_id
+                                ref_node: "152547"
+                    - - name: left
+                        input:
+                            type: string
+                            value: "user_phonenumber"
+                      - name: operation
+                        input:
+                            type: string
+                            value: "EQUAL"
+                      - name: right
+                        input:
+                            value:
+                                path: phone_number
+                                ref_node: "152547"
+                    - - name: left
+                        input:
+                            type: string
+                            value: "order_id"
+                      - name: operation
+                        input:
+                            type: string
+                            value: "EQUAL"
+                      - name: right
+                        input:
+                            value:
+                                path: order_id
+                                ref_node: "136236"
+                    - - name: left
+                        input:
+                            type: string
+                            value: "user_phonenumber"
+                      - name: operation
+                        input:
+                            type: string
+                            value: "EQUAL"
+                      - name: right
+                        input:
+                            value:
+                                path: phone_number
+                                ref_node: "136236"
+                logic: OR
+            fieldList:
+                - fieldID: 1.828190873601e+12
+                  isDistinct: false
+                - fieldID: 1.828190873602e+12
+                  isDistinct: false
+                - fieldID: 1.828190873604e+12
+                  isDistinct: false
+                - fieldID: 1.828190873603e+12
+                  isDistinct: false
+            limit: 100
+            orderByList:
+                - fieldID: 1.828190873601e+12
+                  isAsc: true
+        settingOnError:
+            processType: 1
+            retryTimes: 0
+            timeoutMs: 60000
+    - id: "148177"
+      type: loop
+      title: 循环_手机号查询可能查到多条订单
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Loop-v2.jpg
+      description: "用于通过设定循环次数和逻辑，重复执行一系列任务"
+      position:
+        x: 3960
+        y: 291.7499999999999
+      canvas_position:
+        x: 3320
+        y: 609.4499999999999
+      parameters:
+        loopCount:
+            type: integer
+            value:
+                content: 10
+                rawMeta:
+                    type: 2
+                type: literal
+        loopType: array
+        node_inputs:
+            - name: input
+              input:
+                value:
+                    path: outputList
+                    ref_node: "197955"
+        node_outputs:
+            expressNumber_list:
+                value:
+                    type: list
+                    items:
+                        type: string
+                        value: null
+                    value:
+                        path: expressNumber
+                        ref_node: "1511182"
+            finalStatusDesc_list:
+                value:
+                    type: list
+                    items:
+                        type: string
+                        value: null
+                    value:
+                        path: finalStatusDesc
+                        ref_node: "1511182"
+            output:
+                value:
+                    type: list
+                    items:
+                        type: string
+                        value: null
+                    value:
+                        path: finalStatus
+                        ref_node: "1511182"
+        variableParameters: []
+      nodes:
+        - id: "195618"
+          type: condition
+          title: 选择器_判断是否有物流单号
+          icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Condition-v2.jpg
+          description: "连接多个下游分支，若设定的条件成立则仅运行对应的分支，若均不成立则只运行“否则”分支"
+          position:
+            x: 180
+            y: 92.94999999999999
+          parameters:
+            branches:
+                - condition:
+                    conditions:
+                        - left:
+                            input:
+                                type: string
+                                value:
+                                    path: input.tracking_number
+                                    ref_node: "148177"
+                          operator: 3
+                          right:
+                            input:
+                                type: integer
+                                value: 1
+                    logic: 2
+        - id: "1511182"
+          type: plugin
+          title: ExpressDeliveryPlugin_1
+          icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Plugin-v2.jpg
+          description: "查询快递状态，返回值为空代表未查到快递信息，请检查快递单号是否正确"
+          position:
+            x: 640
+            y: 0
+          parameters:
+            apiParam:
+                - name: apiID
+                  input:
+                    type: string
+                    value: "7362084343025532964"
+                - name: apiName
+                  input:
+                    type: string
+                    value: "ExpressDeliveryPlugin"
+                - name: pluginID
+                  input:
+                    type: string
+                    value: "7362084343025516580"
+                - name: pluginName
+                  input:
+                    type: string
+                    value: "国内快递查询"
+                - name: pluginVersion
+                  input:
+                    type: string
+                    value: ""
+                - name: tips
+                  input:
+                    type: string
+                    value: ""
+                - name: outDocLink
+                  input:
+                    type: string
+                    value: ""
+            node_inputs:
+                - name: express_number
+                  input:
+                    type: string
+                    value:
+                        path: input.tracking_number
+                        ref_node: "148177"
+            node_outputs:
+                code:
+                    type: integer
+                    value: null
+                customerPhone:
+                    type: string
+                    value: null
+                    description: 客服电话
+                detailUrl:
+                    type: string
+                    value: null
+                    description: 快递服务商信息查询详情页
+                expressName:
+                    type: string
+                    value: null
+                    description: 快递公司
+                expressNumber:
+                    type: string
+                    value: null
+                    description: 快递单号
+                finalStatus:
+                    type: string
+                    value: null
+                    description: 快递最终状态
+                finalStatusDesc:
+                    type: string
+                    value: null
+                    description: 快递最终状态描述
+                message:
+                    type: string
+                    value: null
+                statusDetail:
+                    type: list
+                    items:
+                        type: object
+                        properties:
+                            areaCode:
+                                type: string
+                                value: null
+                                description: 快递所处地点地理编码
+                            areaName:
+                                type: string
+                                value: null
+                                description: 快递所处地点
+                            status:
+                                type: string
+                                value: null
+                                description: 快递状态
+                            statusDesc:
+                                type: string
+                                value: null
+                                description: 快递状态描述
+                            statusTime:
+                                type: string
+                                value: null
+                                description: 快递状态更新时间
+                        value: null
+                    value: null
+                    description: 快递状态明细
+            settingOnError:
+                processType: 1
+                retryTimes: 0
+                timeoutMs: 180000
+        - id: "160031"
+          type: output
+          title: 待发货直接输出
+          icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+          description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+          position:
+            x: 640
+            y: 211.70000000000002
+          parameters:
+            callTransferVoice: true
+            chatHistoryWriting: historyWrite
+            content:
+                type: string
+                value:
+                    content: 亲，让您久等啦！实在不好意思，您的宝贝{{product_name}}我们还在紧锣密鼓地打包中。很快就能飞奔到您身边！一有物流单号，我们立刻更新，请您再耐心等待一下下哦~
+                    type: literal
+            node_inputs:
+                - name: product_name
+                  input:
+                    type: string
+                    value:
+                        path: input.product_name
+                        ref_node: "148177"
+            streamingOutput: false
+        - id: "119901"
+          type: output
+          title: 输出_查询信息3
+          icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+          description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+          position:
+            x: 1100
+            y: 0
+          parameters:
+            callTransferVoice: true
+            chatHistoryWriting: historyWrite
+            content:
+                type: string
+                value:
+                    content: 亲亲，已为您查到您的订单 {{Expressnumber}}，{{finalStatusDesc}}
+                    type: literal
+            node_inputs:
+                - name: finalStatusDesc
+                  input:
+                    value:
+                        path: finalStatusDesc
+                        ref_node: "1511182"
+                - name: Expressnumber
+                  input:
+                    value:
+                        path: expressNumber
+                        ref_node: "1511182"
+            streamingOutput: false
+      edges:
+        - source_node: "148177"
+          target_node: "195618"
+          source_port: loop-function-inline-output
+        - source_node: "195618"
+          target_node: "1511182"
+          source_port: "true"
+        - source_node: "195618"
+          target_node: "160031"
+          source_port: "false"
+        - source_node: "1511182"
+          target_node: "119901"
+        - source_node: "160031"
+          target_node: "148177"
+          target_port: loop-function-inline-input
+        - source_node: "119901"
+          target_node: "148177"
+          target_port: loop-function-inline-input
+    - id: "183703"
+      type: output
+      title: 商品信息/用户手机号错误转人工
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+      description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+      position:
+        x: 3960
+        y: 1324.5500000000002
+      parameters:
+        callTransferVoice: true
+        chatHistoryWriting: historyWrite
+        content:
+            type: string
+            value:
+                content: 亲，非常抱歉让您久等了。系统刚刚尝试了多次，但未能成功匹配到您提供的信息{{phone_number}}{{product_name}}。为了不让您的事情耽搁，我已经为您呼叫了专属人工客服，他们可以通过内部系统为您进一步核实，请您稍等片刻哦~
+                type: literal
+        node_inputs:
+            - name: phone_number
+              input:
+                value:
+                    path: phone_number
+                    ref_node: "152547"
+            - name: product_name
+              input:
+                value:
+                    path: product_name
+                    ref_node: "152547"
+        streamingOutput: false
+    - id: "116590"
+      type: output
+      title: 输出-查询信息1
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+      description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+      position:
+        x: 3960
+        y: -9.237055564881302e-14
+      parameters:
+        callTransferVoice: true
+        chatHistoryWriting: historyWrite
+        content:
+            type: string
+            value:
+                content: 亲亲，已为您查到您的订单 {{expressnumber}}，{{output}}
+                type: literal
+        node_inputs:
+            - name: output
+              input:
+                value:
+                    path: finalStatusDesc
+                    ref_node: "133964"
+            - name: expressnumber
+              input:
+                value:
+                    path: expressNumber
+                    ref_node: "133964"
+        streamingOutput: false
+    - id: "1916902"
+      type: plugin
+      title: ExpressDeliveryPlugin_2
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Plugin-v2.jpg
+      description: "查询快递状态，返回值为空代表未查到快递信息，请检查快递单号是否正确"
+      position:
+        x: 2940
+        y: 1112.8500000000001
+      parameters:
+        apiParam:
+            - name: apiID
+              input:
+                type: string
+                value: "7362084343025532964"
+            - name: apiName
+              input:
+                type: string
+                value: "ExpressDeliveryPlugin"
+            - name: pluginID
+              input:
+                type: string
+                value: "7362084343025516580"
+            - name: pluginName
+              input:
+                type: string
+                value: "国内快递查询"
+            - name: pluginVersion
+              input:
+                type: string
+                value: ""
+            - name: tips
+              input:
+                type: string
+                value: ""
+            - name: outDocLink
+              input:
+                type: string
+                value: ""
+        node_inputs:
+            - name: express_number
+              input:
+                value:
+                    path: tracking_number
+                    ref_node: "152547"
+        node_outputs:
+            code:
+                type: integer
+                value: null
+            customerPhone:
+                type: string
+                value: null
+                description: 客服电话
+            detailUrl:
+                type: string
+                value: null
+                description: 快递服务商信息查询详情页
+            expressName:
+                type: string
+                value: null
+                description: 快递公司
+            expressNumber:
+                type: string
+                value: null
+                description: 快递单号
+            finalStatus:
+                type: string
+                value: null
+                description: 快递最终状态
+            finalStatusDesc:
+                type: string
+                value: null
+                description: 快递最终状态描述
+            message:
+                type: string
+                value: null
+            statusDetail:
+                type: list
+                items:
+                    type: object
+                    properties:
+                        areaCode:
+                            type: string
+                            value: null
+                            description: 快递所处地点地理编码
+                        areaName:
+                            type: string
+                            value: null
+                            description: 快递所处地点
+                        status:
+                            type: string
+                            value: null
+                            description: 快递状态
+                        statusDesc:
+                            type: string
+                            value: null
+                            description: 快递状态描述
+                        statusTime:
+                            type: string
+                            value: null
+                            description: 快递状态更新时间
+                    value: null
+                value: null
+                description: 快递状态明细
+        settingOnError:
+            processType: 1
+            retryTimes: 0
+            timeoutMs: 180000
+    - id: "1755787"
+      type: output
+      title: 输出-查询信息2
+      icon: https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Output-v2.jpg
+      description: "节点从“消息”更名为“输出”，支持中间过程的消息输出，支持流式和非流式两种方式"
+      position:
+        x: 3960
+        y: 1112.8500000000001
+      parameters:
+        callTransferVoice: true
+        chatHistoryWriting: historyWrite
+        content:
+            type: string
+            value:
+                content: 亲亲，已为您查到您的订单 {{expressnumber}}，{{output}}
+                type: literal
+        node_inputs:
+            - name: output
+              input:
+                value:
+                    path: finalStatusDesc
+                    ref_node: "1916902"
+            - name: expressnumber
+              input:
+                value:
+                    path: expressNumber
+                    ref_node: "1916902"
+        streamingOutput: false
+edges:
+    - source_node: "100001"
+      target_node: "124727"
+    - source_node: "166482"
+      target_node: "900001"
+    - source_node: "183703"
+      target_node: "900001"
+    - source_node: "148177"
+      target_node: "900001"
+      source_port: loop-output
+    - source_node: "116590"
+      target_node: "900001"
+    - source_node: "124727"
+      target_node: "900001"
+      source_port: branch_0
+    - source_node: "1755787"
+      target_node: "900001"
+    - source_node: "124727"
+      target_node: "136236"
+      source_port: branch_1
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: branch_2
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: branch_3
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: branch_4
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: branch_5
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: branch_6
+    - source_node: "124727"
+      target_node: "166482"
+      source_port: default
+    - source_node: "136236"
+      target_node: "128243"
+    - source_node: "128243"
+      target_node: "152547"
+      source_port: "true"
+    - source_node: "128243"
+      target_node: "159600"
+      source_port: "false"
+    - source_node: "152547"
+      target_node: "186792"
+    - source_node: "159600"
+      target_node: "186792"
+    - source_node: "186792"
+      target_node: "133964"
+      source_port: "true"
+    - source_node: "133964"
+      target_node: "116590"
+    - source_node: "186792"
+      target_node: "197955"
+      source_port: true_1
+    - source_node: "186792"
+      target_node: "197955"
+      source_port: true_2
+    - source_node: "186792"
+      target_node: "1916902"
+      source_port: true_3
+    - source_node: "186792"
+      target_node: "197955"
+      source_port: true_4
+    - source_node: "186792"
+      target_node: "197955"
+      source_port: true_5
+    - source_node: "186792"
+      target_node: "183703"
+      source_port: "false"
+    - source_node: "197955"
+      target_node: "148177"
+    - source_node: "1916902"
+      target_node: "1755787"

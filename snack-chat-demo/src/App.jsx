@@ -9,6 +9,8 @@ function App() {
   const [messages, setMessages] = useState(initialMessages)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  // 对话流会话 ID：追问订单号等场景需要带上，保持多轮上下文
+  const conversationIdRef = useRef(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -21,7 +23,7 @@ function App() {
     scrollToBottom()
   }, [messages, isTyping, scrollToBottom])
 
-  // 发送消息并请求 Coze 工作流回复
+  // 发送消息并请求 Coze 对话流回复
   const sendMessage = useCallback(
     async (text) => {
       const trimmed = text.trim()
@@ -33,7 +35,13 @@ function App() {
       setIsTyping(true)
 
       try {
-        const reply = await fetchAiReply(trimmed)
+        const { reply, conversationId } = await fetchAiReply(
+          trimmed,
+          conversationIdRef.current,
+        )
+        if (conversationId) {
+          conversationIdRef.current = conversationId
+        }
         const aiMsg = { id: messageId++, role: 'ai', text: reply }
         setMessages((prev) => [...prev, aiMsg])
       } catch {

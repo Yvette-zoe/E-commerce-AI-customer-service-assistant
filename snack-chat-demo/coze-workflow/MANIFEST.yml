@@ -1,0 +1,11 @@
+type: Workflow
+version: 1.0.0
+main:
+    id: 7667885517007110163
+    name: ecommerce_customer_service_v1
+    desc: AI电商客服助手（一期），重点解决用户售后高频问题智能回答。核心场景：物流查询、订单状态等。关键能力：意图识别、订单接口调用、转人工兜底。
+    icon: plugin_icon/chatflow-icon.png
+    version: ""
+    flowMode: 3
+    commitId: ""
+sub: []
