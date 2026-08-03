@@ -1,9 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import {
-  initialMessages,
-  quickQuestions,
-  getFakeReply,
-} from './data/fakeResponses'
+import { initialMessages, quickQuestions } from './data/fakeResponses'
+import { fetchAiReply } from './api/coze'
 import './App.css'
 
 let messageId = initialMessages.length + 1
@@ -24,9 +21,9 @@ function App() {
     scrollToBottom()
   }, [messages, isTyping, scrollToBottom])
 
-  // 发送消息
+  // 发送消息并请求 Coze 工作流回复
   const sendMessage = useCallback(
-    (text) => {
+    async (text) => {
       const trimmed = text.trim()
       if (!trimmed || isTyping) return
 
@@ -35,16 +32,17 @@ function App() {
       setInput('')
       setIsTyping(true)
 
-      // 约 1 秒后显示 AI 回复
-      setTimeout(() => {
-        const aiMsg = {
-          id: messageId++,
-          role: 'ai',
-          text: getFakeReply(trimmed),
-        }
+      try {
+        const reply = await fetchAiReply(trimmed)
+        const aiMsg = { id: messageId++, role: 'ai', text: reply }
         setMessages((prev) => [...prev, aiMsg])
+      } catch {
+        // 调用失败时展示友好提示
+        const errMsg = { id: messageId++, role: 'ai', text: '稍后再试' }
+        setMessages((prev) => [...prev, errMsg])
+      } finally {
         setIsTyping(false)
-      }, 1000)
+      }
     },
     [isTyping],
   )
