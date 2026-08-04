@@ -44,23 +44,23 @@ function extractReplyFromSse(sseText) {
     }
   }
 
-  // 过滤结束节点吐出的 JSON 变量包
-  const natural = answers.filter((text) => {
-    const t = text.trim()
-    if (!t) return false
-    if (t.startsWith('{') && t.endsWith('}')) {
-      try {
-        JSON.parse(t)
-        return false
-      } catch {
-        return true
+  // 过滤结束节点吐出的 JSON 变量包；每个输出节点对应一条独立回复
+  const replies = answers
+    .map((text) => text.trim())
+    .filter((t) => {
+      if (!t) return false
+      if (t.startsWith('{') && t.endsWith('}')) {
+        try {
+          JSON.parse(t)
+          return false
+        } catch {
+          return true
+        }
       }
-    }
-    return true
-  })
+      return true
+    })
 
-  const reply = natural.join('\n').trim() || ''
-  return { conversationId, reply, failedMsg, answers }
+  return { conversationId, replies, failedMsg, answers }
 }
 
 /**
@@ -145,7 +145,7 @@ function cozeChatProxy() {
         return
       }
 
-      const { conversationId: nextConversationId, reply, failedMsg } =
+      const { conversationId: nextConversationId, replies, failedMsg } =
         extractReplyFromSse(sseText)
 
       if (failedMsg) {
@@ -155,7 +155,7 @@ function cozeChatProxy() {
         return
       }
 
-      if (!reply) {
+      if (!replies.length) {
         res.statusCode = 502
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({ error: '未解析到有效回复' }))
@@ -166,7 +166,8 @@ function cozeChatProxy() {
       res.setHeader('Content-Type', 'application/json')
       res.end(
         JSON.stringify({
-          reply,
+          // replies：每个输出节点一条，前端各渲染为一个气泡
+          replies,
           conversation_id: nextConversationId,
         }),
       )

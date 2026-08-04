@@ -35,15 +35,20 @@ function App() {
       setIsTyping(true)
 
       try {
-        const { reply, conversationId } = await fetchAiReply(
+        const { replies, conversationId } = await fetchAiReply(
           trimmed,
           conversationIdRef.current,
         )
         if (conversationId) {
           conversationIdRef.current = conversationId
         }
-        const aiMsg = { id: messageId++, role: 'ai', text: reply }
-        setMessages((prev) => [...prev, aiMsg])
+        // 每个输出节点单独渲染为一个 AI 气泡
+        const aiMsgs = replies.map((text) => ({
+          id: messageId++,
+          role: 'ai',
+          text,
+        }))
+        setMessages((prev) => [...prev, ...aiMsgs])
       } catch {
         // 调用失败时展示友好提示
         const errMsg = { id: messageId++, role: 'ai', text: '稍后再试' }
