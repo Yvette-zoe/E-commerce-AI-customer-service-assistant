@@ -49,9 +49,14 @@ function App() {
           text,
         }))
         setMessages((prev) => [...prev, ...aiMsgs])
-      } catch {
-        // 调用失败时展示友好提示
-        const errMsg = { id: messageId++, role: 'ai', text: '稍后再试' }
+      } catch (err) {
+        // 配置类错误直接展示原因，其余统一「稍后再试」
+        const reason = err instanceof Error ? err.message : ''
+        const tip =
+          reason.includes('COZE_API_TOKEN') || reason.includes('COZE_WORKFLOW_ID')
+            ? '未配置扣子令牌：请在 snack-chat-demo/.env 填写 COZE_API_TOKEN 后重启 npm run dev'
+            : '稍后再试'
+        const errMsg = { id: messageId++, role: 'ai', text: tip }
         setMessages((prev) => [...prev, errMsg])
       } finally {
         setIsTyping(false)
